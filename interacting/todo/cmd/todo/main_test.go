@@ -12,10 +12,7 @@ import (
 	"time"
 )
 
-var (
-	binName  = "todo"
-	fileName = ".todo.json"
-)
+var binName = "todo"
 
 func TestMain(m *testing.M) {
 	fmt.Println("Building tool...")
@@ -35,7 +32,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("Cleaning up...")
 	os.Remove(binName)
-	os.Remove(fileName)
 
 	os.Exit(result)
 }
@@ -48,10 +44,17 @@ func TestTodoCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatalf("error creating temp file: %s", err)
+	}
+	defer os.Remove(tf.Name())
+
 	cmdPath := filepath.Join(dir, binName)
 
 	t.Run("AddNewTaskFromArgs", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-add", task)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
 
 		if err := cmd.Run(); err != nil {
 			t.Fatal(err)
@@ -61,6 +64,8 @@ func TestTodoCLI(t *testing.T) {
 	task2 := "test task number 2"
 	t.Run("AddNewTaskFromSTDIN", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-add")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		cmdStdIn, err := cmd.StdinPipe()
 		if err != nil {
 			t.Fatal(err)
@@ -75,6 +80,8 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("ListTasks", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-list")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
@@ -88,13 +95,15 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("ListTasksVerbose", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-list", "-v")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		l := todo.List{}
-		l.Get(fileName)
+		l.Get(tf.Name())
 
 		expected := fmt.Sprintf("  1: %s [created: %s]\n  2: %s [created: %s]\n",
 			task, l[0].CreatedAt.Format(time.DateTime),
@@ -107,12 +116,15 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("CompleteTask", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-complete", "1")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
 
 		if err := cmd.Run(); err != nil {
 			t.Fatal(err)
 		}
 
 		cmd = exec.Command(cmdPath, "-list")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
@@ -126,6 +138,8 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("ListTasksSuppressCompleted", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-list", "-s")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
@@ -139,12 +153,15 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("DeleteTask", func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-del", "1")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
 
 		if err := cmd.Run(); err != nil {
 			t.Fatal(err)
 		}
 
 		cmd = exec.Command(cmdPath, "-list")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TODO_FILENAME=%s", tf.Name()))
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
