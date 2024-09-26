@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"rggo/interacting/todo"
 	"runtime"
 	"testing"
+	"time"
 )
 
 var (
@@ -78,6 +80,57 @@ func TestTodoCLI(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := fmt.Sprintf("  1: %s\n  2: %s\n", task, task2)
+
+		if expected != string(out) {
+			t.Errorf("expected %q, got %q\n", expected, string(out))
+		}
+	})
+
+	t.Run("ListTasksVerbose", func(t *testing.T) {
+		cmd := exec.Command(cmdPath, "-list", "-v")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		l := todo.List{}
+		l.Get(fileName)
+
+		expected := fmt.Sprintf("  1: %s [created: %s]\n  2: %s [created: %s]\n",
+			task, l[0].CreatedAt.Format(time.DateTime),
+			task2, l[1].CreatedAt.Format(time.DateTime))
+
+		if expected != string(out) {
+			t.Errorf("expected %q, got %q\n", expected, string(out))
+		}
+	})
+
+	t.Run("CompleteTask", func(t *testing.T) {
+		cmd := exec.Command(cmdPath, "-complete", "1")
+
+		if err := cmd.Run(); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd = exec.Command(cmdPath, "-list")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := fmt.Sprintf("X 1: %s\n  2: %s\n", task, task2)
+
+		if expected != string(out) {
+			t.Errorf("expected %q, got %q\n", expected, string(out))
+		}
+	})
+
+	t.Run("ListTasksSuppressCompleted", func(t *testing.T) {
+		cmd := exec.Command(cmdPath, "-list", "-s")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := fmt.Sprintf("  1: %s\n", task2)
 
 		if expected != string(out) {
 			t.Errorf("expected %q, got %q\n", expected, string(out))

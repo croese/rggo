@@ -8,9 +8,43 @@ import (
 	"os"
 	"rggo/interacting/todo"
 	"strings"
+	"time"
 )
 
 var todoFileName = ".todo.json"
+
+type listStringer struct {
+	verbose       bool
+	skipCompleted bool
+	list          *todo.List
+}
+
+func (s listStringer) String() string {
+	formatted := ""
+
+	// handling counter manually since we might skip items in the loop
+	index := 0
+	for _, t := range *s.list {
+		prefix := "  "
+		if t.Done && s.skipCompleted {
+			continue
+		}
+
+		if t.Done {
+			prefix = "X "
+		}
+
+		if s.verbose {
+			formatted += fmt.Sprintf("%s%d: %s [created: %s]\n", prefix,
+				index+1, t.Task, t.CreatedAt.Format(time.DateTime))
+		} else {
+			formatted += fmt.Sprintf("%s%d: %s\n", prefix, index+1, t.Task)
+		}
+
+		index++
+	}
+	return formatted
+}
 
 func main() {
 	flag.Usage = func() {
@@ -20,10 +54,12 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage information:\n")
 		flag.PrintDefaults()
 	}
-	add := flag.Bool("add", false, "Task to be included in the todo list")
+	add := flag.Bool("add", false, "Task to be included in the todo list. Task description may be provided after this argument or from STDIN.")
 	list := flag.Bool("list", false, "List all tasks")
 	complete := flag.Int("complete", 0, "Item to be completed")
 	delete := flag.Int("del", 0, "Item to be deleted")
+	verbose := flag.Bool("v", false, "Enable verbose output")
+	showCompleted := flag.Bool("s", false, "Suppress completed tasks")
 	flag.Parse()
 
 	if os.Getenv("TODO_FILENAME") != "" {
@@ -39,7 +75,8 @@ func main() {
 
 	switch {
 	case *list:
-		fmt.Print(l)
+		s := listStringer{*verbose, *showCompleted, l}
+		fmt.Print(s)
 	case *complete > 0:
 		if err := l.Complete(*complete); err != nil {
 			fmt.Fprintln(os.Stderr, err)
