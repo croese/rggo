@@ -13,9 +13,9 @@ vet: fmt
 .PHONY:vet
 
 test: vet
-	go test ./...
+	go test -v ./...
 .PHONY:test
 
 build: test
-	go build cmd/todo/main.go
+	go build -o todo cmd/todo/main.go
 .PHONY:build
