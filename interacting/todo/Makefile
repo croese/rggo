@@ -19,3 +19,8 @@ test: vet
 build: test
 	go build -o todo cmd/todo/main.go
 .PHONY:build
+
+clean:
+	rm todo
+	rm .todo.json
+.PHONY:clean
