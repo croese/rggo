@@ -1,0 +1,7 @@
+goos: darwin
+goarch: arm64
+pkg: rggo/performance/colStats
+cpu: Apple M1
+BenchmarkRun-8   	      10	 309106879 ns/op
+PASS
+ok  	rggo/performance/colStats	4.027s
